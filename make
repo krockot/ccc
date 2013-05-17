@@ -1,8 +1,10 @@
 #!/bin/bash
 
-pegjs --track-line-and-column scheme.pegjs
-sed -i "s/module\\.exports/Ccc.Parser/" scheme.js
-cat runtime.js scheme.js keywords.js > ccc.js
-rm -f scheme.js
-yui-compressor ccc.js -o ccc.min.js
+if [ parser/ccc.pegjs -nt parser/ccc.js ]; then
+  pegjs -e ccc.Parser --allowed-start-rules start,datum parser/ccc.pegjs
+fi
+
+cat $(cat sources.list) > ccc.js
+
+# yui-compressor ccc.js -o ccc.min.js
 
