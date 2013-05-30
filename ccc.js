@@ -273,6 +273,16 @@ ccc.Pair.prototype.toArray = function() {
   return array;
 };
 
+// Returns true iff this is a proper list
+ccc.Pair.prototype.isList = function() {
+  var pair = this;
+  while (pair.constructor === ccc.Pair)
+    pair = pair.cdr_;
+  if (pair === ccc.nil)
+    return true;
+  return false;
+};
+
 // Evaluates a function over each element in a list. If the list is improper,
 // the second (optional) function is called with the non-nil tail value.
 ccc.Pair.prototype.forEach = function(fn, opt_tailFn) {
@@ -1232,8 +1242,8 @@ ccc.Parser = (function() {
         peg$c22 = function(i) {
             return new ccc.Symbol(i);
           },
-        peg$c23 = /^[!$%&*\/:<=>?\^_~a-z]/i,
-        peg$c24 = "[!$%&*\\/:<=>?\\^_~a-z]i",
+        peg$c23 = /^[!$%&*\/:<=>?\^_~a-z0-9]/i,
+        peg$c24 = "[!$%&*\\/:<=>?\\^_~a-z0-9]i",
         peg$c25 = /^[\x80-\uFFFF]/,
         peg$c26 = "[\\x80-\\uFFFF]",
         peg$c27 = function(c) { return c; },
@@ -3028,7 +3038,7 @@ ccc.Parser = (function() {
     }
 
     function peg$parsenum_10() {
-      var s0, s1, s2, s3, s4, s5, s6;
+      var s0, s1, s2, s3, s4, s5, s6, s7;
 
       s0 = peg$currPos;
       if (input.substr(peg$currPos, 2).toLowerCase() === peg$c133) {
@@ -3084,13 +3094,19 @@ ccc.Parser = (function() {
                   s6 = peg$c6;
                 }
                 if (s6 !== null) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c135(s2,s3,s5,s6);
-                  if (s1 === null) {
-                    peg$currPos = s0;
-                    s0 = s1;
+                  s7 = peg$parseDL();
+                  if (s7 !== null) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c135(s2,s3,s5,s6);
+                    if (s1 === null) {
+                      peg$currPos = s0;
+                      s0 = s1;
+                    } else {
+                      s0 = s1;
+                    }
                   } else {
-                    s0 = s1;
+                    peg$currPos = s0;
+                    s0 = peg$c0;
                   }
                 } else {
                   peg$currPos = s0;
@@ -3171,13 +3187,19 @@ ccc.Parser = (function() {
                     s6 = peg$c6;
                   }
                   if (s6 !== null) {
-                    peg$reportedPos = s0;
-                    s1 = peg$c135(s2,s3,s5,s6);
-                    if (s1 === null) {
-                      peg$currPos = s0;
-                      s0 = s1;
+                    s7 = peg$parseDL();
+                    if (s7 !== null) {
+                      peg$reportedPos = s0;
+                      s1 = peg$c135(s2,s3,s5,s6);
+                      if (s1 === null) {
+                        peg$currPos = s0;
+                        s0 = s1;
+                      } else {
+                        s0 = s1;
+                      }
                     } else {
-                      s0 = s1;
+                      peg$currPos = s0;
+                      s0 = peg$c0;
                     }
                   } else {
                     peg$currPos = s0;
@@ -3243,13 +3265,19 @@ ccc.Parser = (function() {
                   s4 = peg$c6;
                 }
                 if (s4 !== null) {
-                  peg$reportedPos = s0;
-                  s1 = peg$c136(s2,s3,s4);
-                  if (s1 === null) {
-                    peg$currPos = s0;
-                    s0 = s1;
+                  s5 = peg$parseDL();
+                  if (s5 !== null) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c136(s2,s3,s4);
+                    if (s1 === null) {
+                      peg$currPos = s0;
+                      s0 = s1;
+                    } else {
+                      s0 = s1;
+                    }
                   } else {
-                    s0 = s1;
+                    peg$currPos = s0;
+                    s0 = peg$c0;
                   }
                 } else {
                   peg$currPos = s0;
@@ -4123,7 +4151,12 @@ ccc.lib.base = new ccc.Library("base");
     // Construct a new pair from two arguments
     "cons": function(car, cdr) {
       return new ccc.Pair(car, cdr);
-    }
+    },
+
+    // Construct a list from arguments
+    "list": function() {
+      return ccc.Pair.makeList.apply(null, Array.prototype.slice.call(arguments));
+    },
   });
 }());
 // call-with-current-continuation
@@ -4134,6 +4167,19 @@ ccc.lib.base.addNativeFunction("call/cc", function(environment, continuation, ar
   if (!(args[0].apply instanceof Function))
     throw new Error("call/cc: Object " + args[0] + " is not applicable.");
   return args[0].apply(environment, continuation, ccc.Pair.makeList(new ccc.Continuation(continuation)));
+});
+
+ccc.lib.base.addNativeFunction("apply", function(environment, continuation, args) {
+  args = args.toArray();
+  if (args.length !== 2)
+    throw new Error("apply: Exactly 2 arguments expected");
+  var fn = args[0];
+  if (!(fn.apply instanceof Function))
+    throw new Error("apply: Object " + fn + " is not applicable.");
+  args = args[1];
+  if (args !== ccc.nil && (args.constructor !== ccc.Pair || !args.isList()))
+    throw new Error("apply: Argument 1 is not a list");
+  return fn.apply(environment, continuation, args);
 });
 // display simply writes badly formatted data to the JS console
 ccc.lib.base.addSimpleFunction("display", function(value) {

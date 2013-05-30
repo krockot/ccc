@@ -34,7 +34,7 @@ symbol
   / quoted_symbol
 
 initial
-  = [!$%&*/:<=>?^_~a-z]i
+  = [!$%&*/:<=>?^_~a-z0-9]i
   / !space c:[\x80-\uffff] { return c; }
 
 subsequent
@@ -132,13 +132,13 @@ suffix
   = e:[eE] s:[-+]? d:digit+ { return e + s + d.join(""); }
 
 num_10
-  = "#d"i? sign:[-+]? intPart:digit* "." fracPart:digit+ suffix:suffix? {
+  = "#d"i? sign:[-+]? intPart:digit* "." fracPart:digit+ suffix:suffix? DL {
     return new ccc.Number(parseFloat(sign + intPart.join("") + "." + fracPart.join("") + suffix));
   }
-  / "#d"i? sign:[-+]? intPart:digit+ "." fracPart:digit* suffix:suffix? {
+  / "#d"i? sign:[-+]? intPart:digit+ "." fracPart:digit* suffix:suffix? DL {
     return new ccc.Number(parseFloat(sign + intPart.join("") + "." + fracPart.join("") + suffix));
   }
-  / "#d"i? sign:[-+]? digits:digit+ suffix:suffix? {
+  / "#d"i? sign:[-+]? digits:digit+ suffix:suffix? DL {
     return new ccc.Number(parseFloat(sign + digits.join("") + suffix));
   }
 
