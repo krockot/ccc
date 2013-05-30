@@ -139,7 +139,7 @@ num_10
     return new ccc.Number(parseFloat(sign + intPart.join("") + "." + fracPart.join("") + suffix));
   }
   / "#d"i? sign:[-+]? digits:digit+ suffix:suffix? {
-    return new ccc.Number(parseFloat(sign + digits + suffix));
+    return new ccc.Number(parseFloat(sign + digits.join("") + suffix));
   }
 
 datum

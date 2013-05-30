@@ -1,6 +1,0 @@
-* Fix hygienic macros.  Bindings established within templates should not mask references to outer bindings during expansion.
-* API for persisting syntactic and runtime environments across multiple programs
-* Better API for defining builtin libraries; retrofit stdlib definitions
-* API for DOM manipulation and event binding.
-* HTML5 wrapper APIs - Canvas, WebGL, Audio, WebSockets, etc.
-* A little documentation wouldn't hurt!
