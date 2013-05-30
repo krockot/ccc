@@ -61,10 +61,10 @@ boolean
 character
   = "#\\space"i DL { return new ccc.Char(32); }
   / "#\\newline"i DL { return new ccc.Char(10); }
-  / "#\\x"i a:hexdigit b:hexdigit {
+  / "#\\x"i a:hexdigit b:hexdigit DL {
     return new ccc.Char(parseInt(a + b, 16));
   }
-  / "#\\u"i a:hexdigit b:hexdigit c:hexdigit d:hexdigit {
+  / "#\\u"i a:hexdigit b:hexdigit c:hexdigit d:hexdigit DL {
     return new ccc.Char(parseInt(a + b + c + d, 16));
   }
   / "#\\" c:. DL { return new ccc.Char(c.charCodeAt(0)); }
