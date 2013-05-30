@@ -54,6 +54,16 @@ ccc.Pair.prototype.toArray = function() {
   return array;
 };
 
+// Returns true iff this is a proper list
+ccc.Pair.prototype.isList = function() {
+  var pair = this;
+  while (pair.constructor === ccc.Pair)
+    pair = pair.cdr_;
+  if (pair === ccc.nil)
+    return true;
+  return false;
+};
+
 // Evaluates a function over each element in a list. If the list is improper,
 // the second (optional) function is called with the non-nil tail value.
 ccc.Pair.prototype.forEach = function(fn, opt_tailFn) {
