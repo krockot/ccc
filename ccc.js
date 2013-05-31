@@ -31,7 +31,7 @@ ccc.Object.prototype.eqv = function(other) {
   return this.eq(other);
 };
 
-// Fallback to this.equal
+// Fallback to this.eqv
 ccc.Object.prototype.equal = function(other) {
   return this.eqv(other);
 };
@@ -288,7 +288,7 @@ ccc.Pair.prototype.isList = function() {
 ccc.Pair.prototype.forEach = function(fn, opt_tailFn) {
   var pair = this;
   while (pair.constructor === ccc.Pair) {
-    fn(pair.car_);
+    fn(pair.car_, pair);
     pair = pair.cdr_;
   }
   if (pair.constructor !== ccc.Nil && opt_tailFn)
@@ -319,7 +319,7 @@ ccc.Pair.prototype.compileElements_ = function(environment) {
  * is bound to a syntax transformer. If expansion happens, compilation recurses
  * on the resulting form.
  *
- * Once expansion is finished, individual list elements are compiled in order.
+ * If the list is not to be expaned, individual list elements are compiled in order.
  */
 ccc.Pair.prototype.compile = function(environment) {
   if (this.car_.constructor === ccc.Symbol && !environment.lookup(this.car_.name)) {
@@ -487,9 +487,9 @@ ccc.Environment.prototype.lookup = function(name) {
 /**
  * Resolve a local binding id to its binding location. Unique local binding IDs
  * are generated when symbols are bound lexically and each unique ID corresponds
- * is assigned to specific lexical binding within the environment. When lexical
- * bindings are evaluated at run-time, they resolve to the active local binding
- * associated with their assigned ID.
+ * to a specific lexical binding within the environment. When a lexical
+ * binding is evaluated at run-time, it resolves to the active local binding
+ * associated with its compiler-assigned ID.
  */
 ccc.Environment.prototype.lookupLocal = function(id) {
   if (this.localBindings_.hasOwnProperty(id))
@@ -698,14 +698,12 @@ ccc.LexicalBinding.prototype.eval = function(environment, continuation) {
  * the |continuation |of the call site, and a proper list containing the
  * applied |arguments| (or ccc.nil if there were none).
  *
- * The function is responsible for returning some meaningful continuation
- * generator (a 0-argument function which returns a 1-argument continuation
- * function). Failure to do so results in immediate program termination.
- *
  * The most common use case is to simply return a value to the caller. To do this,
- * you can simply take the continuation you receive and:
+ * an implementation should return the result of calling the received continuation
+ * with the desired return value, i.e.:
  *
- * return continuation(yourReturnValue);
+ * return continuation(returnValue);
+ *
  */
 ccc.NativeFunction = function(fn, name) {
   this.fn_ = fn;
@@ -1047,6 +1045,34 @@ ccc.PrimitiveTransformers["if"] = new ccc.Transformer(function(environment, form
     }, 'if'),
     ccc.nil);
 });
+
+/**
+ * Native function call.
+ *
+ * Takes a symbol or list of symbols and attempts to resolve a qualified name
+ * within the native window object.
+ *
+ * The qualified object will be called as a function with inputs automatically
+ * coerced into equivalent native types.
+ *
+ * The function's return value will be mapped to an appropriate Object type if
+ * possible.
+ */
+ccc.PrimitiveTransformers["native-apply"] = new ccc.Transformer(function(environment, form) {
+  if (form.constructor !== ccc.Pair)
+    throw new Error("Bad native call form");
+
+  var name = form.car();
+  return form.withCar(new ccc.NativeFunction(function(environment, continuation, args) {
+    args = args.toArray();
+    return function() {
+      var fn = ccc.libutil.resolveNativeName(name);
+      args = args.map(ccc.libutil.objectToNativeValue);
+      var result = ccc.libutil.objectFromNativeValue(fn.value.apply(fn.object, args));
+      return continuation(result);
+    };
+  }, 'native-apply'));
+});
 /**
  * Native function library.
  *
@@ -1079,8 +1105,6 @@ ccc.Library.prototype.entries = function() {
  * using the simpler (and aptly named) addSimpleFunction approach.
  *
  * Examples of when this method is needed instead:
- *  - Performing arity dispatch
- *  - Supporting arity other than fixed-N or 0-or-more.
  *  - Avoiding the overhead of an implicit args list-to-array conversion
  *  - Returning to a continuation other than the one provided by your caller
  */
@@ -1103,21 +1127,16 @@ ccc.Library.prototype.addNativeFunctions = function(entries) {
  * Adds a NativeFunction object to the library using a general-purpose boilerplate
  * call wrapper.
  *
- * Rather than providing a function which has a lot of low-level responsibility,
- * you simply provide a function which optionally takes named arguments and which
- * optionally returns some kind of ccc Object.
+ * If the given function lists no argument names, it is assumed to take 0 or more arguments;
+ * no arity checking is done by the wrapper function and the implementation can access
+ * arguments dynamically through standard function |arguments|.
  *
- * If your function lists no argument names, it is assumed to take 0 or more arguments;
- * no arity checking is done by the wrapper function and you can do whatever you like
- * with the standard function |arguments| array-ish.
- *
- * If your function does list argument names, it is assumed to take exactly that many
+ * If the given function does list argument names, it is assumed to take exactly that many
  * arguments. Arity checking is done by the wrapper function and an exception is thrown
- * if there is a mismatch when called. If there is no mismatch, your named arguments
- * are properly bound to the caller's argument values.
+ * if there is a mismatch when called. If there is no mismatch, the named arguments
+ * will be properly bound to the caller's argument values.
  *
- * If your function returns no value, it will implicitly behave as if it returned
- * the ccc.unspecified value.
+ * If the given function returns no value, the wrapper will return ccc.unspecified.
  */
 ccc.Library.prototype.addSimpleFunction = function(name, fn) {
   this.entries_[name] = new ccc.NativeFunction(function(environment, continuation, args) {
@@ -3955,6 +3974,100 @@ ccc.Parser = (function() {
     parse      : parse
   };
 })();
+ccc.libutil = {};
+
+ccc.libutil.objectToNativeValue = function(object) {
+  var fail = function() {
+    throw new Error("Unable to convert object " + object + " to native value");
+  };
+  if (object === ccc.unspecified)
+    return undefined;
+  if (object === ccc.nil)
+    return null;
+  if (object === ccc.t)
+    return true;
+  if (object === ccc.f)
+    return false;
+  if (object.constructor === ccc.Number)
+    return object.value_;
+  if (object.constructor === ccc.String)
+    return object.value_;
+  if (object.constructor === ccc.Symbol)
+    return object.name;
+  if (object.constructor === ccc.Vector)
+    return object.elements_.map(ccc.libutil.objectToNativeValue);
+  if (object.constructor === ccc.Pair) {
+    var value = {};
+    object.forEach(
+      function(pair) {
+        if (pair.constructor !== ccc.Pair)
+          fail();
+        if (pair.cdr().constructor !== ccc.Pair)
+          fail();
+        if (pair.cdr().cdr() !== ccc.nil)
+          fail();
+        value[ccc.libutil.objectToNativeValue(pair.car())] =
+          ccc.libutil.objectToNativeValue(pair.cdr().car());
+      },
+      function() { fail(); });
+    return value;
+  }
+  fail();
+};
+
+ccc.libutil.objectFromNativeValue = function(value, ignoreObjects) {
+ if (value === undefined)
+    return ccc.unspecified;
+  if (value === null)
+    return ccc.nil;
+  if (value === true)
+    return ccc.t;
+  if (value === false)
+    return ccc.f;
+  if (+value === value)
+    return new ccc.Number(value);
+  if ("" + value === value)
+    return new ccc.String(value);
+  if (value instanceof Array) {
+    if (ignoreObjects)
+      return ccc.unspecified;
+    var fromNativeValue = function(value) {
+      return ccc.libutil.objectFromNativeValue(value, true);
+    };
+    return new ccc.Vector(value.map(fromNativeValue));
+  }
+  if (value instanceof Object) {
+    if (ignoreObjects)
+      return ccc.unspecified;
+    var entries = [];
+    for (var key in value) {
+      if (value.hasOwnProperty(key)) {
+        var entryValue = ccc.libutil.objectFromNativeValue(value[key], true);
+        if (entryValue !== undefined)
+          entries.push(ccc.Pair.makeList(new ccc.Symbol(key), entryValue));
+      }
+    }
+    return ccc.Pair.makeList.apply(null, entries);
+  }
+  throw new Error("Unable to convert native value " + value + " to object");
+};
+
+ccc.libutil.resolveNativeName = function(name) {
+  if (name.constructor === ccc.Symbol)
+    return { object: window, value: window[name.name] };
+  else if(name.constructor === ccc.Pair) {
+    var names = name.toArray().map(function(object) { return object.toString() });
+    var object = window;
+    var value = window;
+    while (value instanceof Object && names.length > 0) {
+      object = value;
+      value = value[names.shift()];
+    }
+    if (names.length === 0)
+      return { object: object, value: value };
+  }
+  throw new Error("Unable to resolve native object name: " + name.toSource());
+};
 /**
  * lib.base contains some useful subset of the standard Scheme library.
  */
@@ -4069,8 +4182,143 @@ ccc.lib.base = new ccc.Library("base");
       });
       return new ccc.Number(product);
     },
+
+    // Is it an integer?
+    "integer?": function(number) {
+      if (number.constructor === ccc.Number && number.value_ === (number.value_ | 0))
+        return ccc.t;
+      return ccc.f;
+    },
+
+    // Is a number zero?
+    "zero?": function(number) {
+      requireNumber(number, 0, "zero?");
+      return number.value_ === 0 ? ccc.t : ccc.f;
+    },
+
+    // Is a number positive?
+    "positive?": function(number) {
+      requireNumber(number, 0, "positive?");
+      return number.value_ > 0 ? ccc.t : ccc.f;
+    },
+
+    // Is a number negative?
+    "negative?": function(number) {
+      requireNumber(number, 0, "negative?");
+      return number.value_ < 0 ? ccc.t : ccc.f;
+    },
+
+    // Is a number an even integer?
+    "even?": function(number) {
+      requireNumber(number, 0, "even?");
+      return number.value_ % 2 === 0 ? ccc.t : ccc.f;
+    },
+
+    // Is a number an odd integer?
+    "odd?": function(number) {
+      requireNumber(number, 0, "odd?");
+      return number.value_ % 2 === 1 ? ccc.t : ccc.f;
+    },
+
+    // Return the maximum argument value
+    "max": function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (args.length === 0)
+        throw new Error("max: Expected at least 1 argument");
+      var max = args[0];
+      requireNumber(max, 0, "max");
+      args.slice(1).forEach(function(value, index) {
+        requireNumber(value, index + 1, "max");
+        if (value.value_ > max.value_)
+          max = value;
+      });
+      return max;
+    },
+
+    // Return the minimum argument value
+    "min": function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (args.length === 0)
+        throw new Error("min: Expected at least 1 argument");
+      var min = args[0];
+      requireNumber(min, 0, "min");
+      args.slice(1).forEach(function(value, index) {
+        requireNumber(value, index + 1, "min");
+        if (value.value_ < min.value_)
+          min = value;
+      });
+      return min;
+    },
+
+    // Compute a % b
+    "modulo": function(a, b) {
+      requireNumber(a, 0, "modulo");
+      requireNumber(b, 1, "modulo");
+      return new ccc.Number(a.value_ % b.value_);
+    },
   });
+
+  var wrapMathFunction = function(fn, name) {
+    ccc.lib.base.addSimpleFunction(name, function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (args.length !== fn.length)
+        throw new Error(name + ": Expected exactly " + fn.length + " arguments");
+      var nativeArgs = args.map(function(value, index) {
+        requireNumber(value, index, name);
+        return value.value_;
+      });
+      return new ccc.Number(fn.apply(null, nativeArgs));
+    });
+  };
+
+  wrapMathFunction(Math.abs, "abs");
+  wrapMathFunction(Math.floor, "floor");
+  wrapMathFunction(Math.ceil, "ceiling");
+  wrapMathFunction(Math.exp, "exp");
+  wrapMathFunction(Math.log, "log");
+  wrapMathFunction(Math.sin, "sin");
+  wrapMathFunction(Math.cos, "cos");
+  wrapMathFunction(Math.tan, "tan");
+  wrapMathFunction(Math.asin, "asin");
+  wrapMathFunction(Math.acos, "acos");
+  wrapMathFunction(Math.sqrt, "sqrt");
+  wrapMathFunction(Math.pow, "expt");
+
+  ccc.lib.base.addSimpleFunction("atan", function() {
+    var args = Array.prototype.slice.call(arguments);
+    if (args.length < 1 || args.length > 2)
+      throw new Error("atan: Expected 1 or 2 arguments");
+    requireNumber(args[0], 0, "atan");
+    if (args.length === 1)
+      return new ccc.Number(Math.atan(args[0].value_));
+    requireNumber(args[1], 1, "atan");
+    return new ccc.Number(Math.atan2(args[0].value_, args[1].value_));
+  });
+
+  var addComparisonPredicate = function(name, comparator) {
+    ccc.lib.base.addSimpleFunction(name, function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (args.length < 2)
+        return ccc.t;
+      var previous = args[0];
+      requireNumber(previous, 0, name);
+      for (var i = 1; i < args.length; ++i) {
+        requireNumber(args[i], i, name);
+        if (!comparator(previous.value_, args[i].value_))
+          return ccc.f;
+        previous = args[i];
+      }
+      return ccc.t;
+    });
+  };
+
+  addComparisonPredicate("=", function(a, b) { return a === b; });
+  addComparisonPredicate("<", function(a, b) { return a < b; });
+  addComparisonPredicate(">", function(a, b) { return a > b; });
+  addComparisonPredicate("<=", function(a, b) { return a <= b; });
+  addComparisonPredicate(">=", function(a, b) { return a >= b; });
 }());
+
 (function() {
   var simplePredicate = function(fn) {
     return function(value) {
@@ -4133,12 +4381,8 @@ ccc.lib.base = new ccc.Library("base");
     // Most relaxed equality test, with support for vector and list recursion.
     "equal?": equalityPredicate(function(a, b) { return a.equal(b); }),
 
-    // Stringify a numeric value
-    "number->string": function(number) {
-      if (number.constructor !== ccc.Number)
-        throw new Error("number->string: Expected a number; received " + number);
-      return new ccc.String(number.value_.toString());
-    },
+    // Boolean negation. Returns #t if argument is #f; return #f otherwise.
+    "not": simplePredicate(function(value) { return value === ccc.f }),
   });
 }());
 (function() {
@@ -4168,6 +4412,269 @@ ccc.lib.base = new ccc.Library("base");
     // Construct a list from arguments
     "list": function() {
       return ccc.Pair.makeList.apply(null, Array.prototype.slice.call(arguments));
+    },
+
+    // Change the car of a pair
+    "set-car!": function(pair, value) {
+      requirePair(pair, 0, "set-car!");
+      pair.car_ = value;
+    },
+
+    // Change the cdr of a pair
+    "set-cdr!": function(pair, value) {
+      requirePair(pair, 0, "set-cdr!");
+      pair.cdr_ = value;
+    },
+
+    // Determine the length of a proper list
+    "length": function(list) {
+      if (list === ccc.nil)
+        return new ccc.Number(0);
+      var count = 0;
+      requirePair(list, 0, "length");
+      list.forEach(
+        function() { ++count },
+        function() { throw new Error("length: Expected proper list"); });
+      return new ccc.Number(count);
+    },
+
+    // Concatenate lists
+    "append": function() {
+      var args = Array.prototype.slice.call(arguments);
+      var tail = args.length > 0 ? args[args.length - 1] : ccc.nil;
+      for (var i = args.length - 2; i >= 0; --i) {
+        var list = args[i];
+        var items = [];
+        if (list === ccc.nil)
+          continue;
+        requirePair(list, i, "append");
+        list.forEach(
+          function(value) { items.push(value); },
+          function() { throw new Error("append: Argument " + i + " is not a proper list"); });
+        while (items.length > 0) {
+          tail = new ccc.Pair(items.pop(), tail);
+        }
+      }
+      return tail;
+    },
+
+    // Reverse a list
+    "reverse": function(list) {
+      var reversed = ccc.nil;
+      if (list === ccc.nil)
+        return ccc.nil;
+      requirePair(list, 0, "reverse");
+      list.forEach(
+          function(value) { reversed = new ccc.Pair(value, reversed); },
+          function() { throw new Error("reverse: Expected proper list") });
+      return reversed;
+    },
+
+    // Skip the first k elements of a list
+    "list-tail": function(list, k) {
+      if (k.constructor !== ccc.Number)
+        throw new Error("list-tail: Argument 1 is not a number");
+      if (k.value_ < 1)
+        return list;
+      k = k.value_;
+      while (k > 0) {
+        if (list.constructor !== ccc.Pair)
+          throw new Error("list-tail: Wrong argument type");
+        list = list.cdr();
+        --k;
+      }
+      return list;
+    },
+
+    // Compute the k-th element of a list
+    "list-ref": function(list, k) {
+      if (k.constructor !== ccc.Number || k.value_ < 0)
+        throw new Error("list-ref: Invalid index");
+      k = k.value_;
+      while (k > 0) {
+        if (list.constructor !== ccc.Pair)
+          throw new Error("list-ref: Wrong argument type");
+        list = list.cdr();
+        --k;
+      }
+      if (list.constructor !== ccc.Pair)
+        throw new Error("list-ref: Wrong argument type");
+      return list.car();
+    },
+
+    // List membership test over 'eq?
+    "memq": function(object, list) {
+      if (list === ccc.nil)
+        return ccc.f;
+      requirePair(list, 1, "memq");
+      while (list.constructor === ccc.Pair) {
+        if (object.eq(list.car()))
+          return list;
+        list = list.cdr();
+      }
+      if (list !== ccc.nil)
+        throw new Error("memq: Improper list");
+      return ccc.f;
+    },
+
+    // List membership test over 'eqv?
+    "memv": function(object, list) {
+      if (list === ccc.nil)
+        return ccc.f;
+      requirePair(list, 1, "memv");
+      while (list.constructor === ccc.Pair) {
+        if (object.eqv(list.car()))
+          return list;
+        list = list.cdr();
+      }
+      if (list !== ccc.nil)
+        throw new Error("memv: Improper list");
+      return ccc.f;
+    },
+
+    // List membership test over 'equal?
+    "member": function(object, list) {
+      if (list === ccc.nil)
+        return ccc.f;
+      requirePair(list, 1, "member");
+      while (list.constructor === ccc.Pair) {
+        if (object.equal(list.car()))
+          return list;
+        list = list.cdr();
+      }
+      if (list !== ccc.nil)
+        throw new Error("member: Improper list");
+      return ccc.f;
+    },
+
+    // Association list membership test with eq
+    "assq": function(object, alist) {
+      if (alist === ccc.nil)
+        return ccc.f;
+      requirePair(alist, 1, "assq");
+      while (alist.constructor === ccc.Pair) {
+        var pair = alist.car();
+        if (pair.constructor !== ccc.Pair)
+          throw new Error("assq: Invalid association list");
+        if (object.eq(pair.car()))
+          return pair;
+        alist = alist.cdr();
+      }
+      if (alist !== ccc.nil)
+        throw new Error("assq: Invalid association list");
+      return ccc.f;
+    },
+
+    // Association list membership test with eqv
+    "assv": function(object, alist) {
+      if (alist === ccc.nil)
+        return ccc.f;
+      requirePair(alist, 1, "assv");
+      while (alist.constructor === ccc.Pair) {
+        var pair = alist.car();
+        if (pair.constructor !== ccc.Pair)
+          throw new Error("assv: Invalid association list");
+        if (object.eqv(pair.car()))
+          return pair;
+        alist = alist.cdr();
+      }
+      if (alist !== ccc.nil)
+        throw new Error("assv: Invalid association list");
+      return ccc.f;
+    },
+
+    // Association list membership test with equal
+    "assoc": function(object, alist) {
+      if (alist === ccc.nil)
+        return ccc.f;
+      requirePair(alist, 1, "assoc");
+      while (alist.constructor === ccc.Pair) {
+        var pair = alist.car();
+        if (pair.constructor !== ccc.Pair)
+          throw new Error("assoc: Invalid association list");
+        if (object.equal(pair.car()))
+          return pair;
+        alist = alist.cdr();
+      }
+      if (alist !== ccc.nil)
+        throw new Error("assoc: Invalid association list");
+      return ccc.f;
+    },
+  });
+
+  var makeListAccessor = function(combo) {
+    var name = "c" + combo + "r";
+    var fnMap = { a: ccc.Pair.prototype.car, d: ccc.Pair.prototype.cdr };
+    var fns = combo.split("").map(function(which) { return fnMap[which]; });
+    fns.reverse();
+    ccc.lib.base.addSimpleFunction(name, function(list) {
+      fns.forEach(function(fn) {
+        if (list.constructor !== ccc.Pair)
+          throw new Error(name + ": Pair expected");
+        list = fn.apply(list);
+      });
+      return list;
+    });
+  };
+
+  ["aa", "ad", "da", "dd", "aaa", "aad", "ada", "add", "daa", "dad", "dda", "ddd",
+   "aaaa", "aaad", "aada", "aadd", "adaa", "adad", "adda", "addd", "daaa", "daad",
+   "dada", "dadd", "ddaa", "ddad", "ddda", "dddd"].
+     forEach(makeListAccessor);
+}());
+
+(function() {
+  var requireString = function(value, index, who) {
+    if (value.constructor !== ccc.String)
+      throw new Error(who + ": Argument " + index + " is not a string");
+  };
+
+  var requireNumber = function(value, index, who) {
+    if (value.constructor !== ccc.Number)
+      throw new Error(who + ": Argument " + index + " is not a number");
+  };
+
+  ccc.lib.base.addSimpleFunctions({
+    // Create symbol named from a string
+    "string->symbol": function(string) {
+      requireString(string, 0, "string->symbol");
+      return new ccc.Symbol(string.value_);
+    },
+
+    // Get symbol name as a string
+    "symbol->string": function(symbol) {
+      if (symbol.constructor !== ccc.Symbol)
+        throw new Error("symbol->string: Expected symbol; received " + symbol);
+      return new ccc.String(symbol.name);
+    },
+
+    // Stringify a numeric value
+    "number->string": function() {
+      var args = Array.prototype.slice.call(arguments);
+      var base = 10;
+      if (args.length < 1 || args.length > 2)
+        throw new Error("number->string: Expected 1 or 2 arguments");
+      requireNumber(args[0], 0, "number->string");
+      if (args.length === 2) {
+        requireNumber(args[1], 1, "number->string");
+        base = args[1].value_;
+      }
+      return new ccc.String(args[0].value_.toString(base));
+    },
+
+    // Parse a numeric string using very lazy parseInt semantics
+    "string->number": function() {
+      var args = Array.prototype.slice.call(arguments);
+      var base = 10;
+      if (args.length < 1 || args.length > 2)
+        throw new Error("string->number: Expected 1 or 2 arguments");
+      if (args[0].constructor !== ccc.String)
+        throw new Error("string->number: Argument 0 is not a string");
+      if (args.length === 2) {
+        requireNumber(args[1], 1, "string->number");
+        base = args[1].value_;
+      }
+      return new ccc.Number(parseInt(args[0].value_, base));
     },
   });
 }());
