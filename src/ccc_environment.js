@@ -75,9 +75,9 @@ ccc.Environment.prototype.lookup = function(name) {
 /**
  * Resolve a local binding id to its binding location. Unique local binding IDs
  * are generated when symbols are bound lexically and each unique ID corresponds
- * is assigned to specific lexical binding within the environment. When lexical
- * bindings are evaluated at run-time, they resolve to the active local binding
- * associated with their assigned ID.
+ * to a specific lexical binding within the environment. When a lexical
+ * binding is evaluated at run-time, it resolves to the active local binding
+ * associated with its compiler-assigned ID.
  */
 ccc.Environment.prototype.lookupLocal = function(id) {
   if (this.localBindings_.hasOwnProperty(id))

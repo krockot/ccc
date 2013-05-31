@@ -30,8 +30,6 @@ ccc.Library.prototype.entries = function() {
  * using the simpler (and aptly named) addSimpleFunction approach.
  *
  * Examples of when this method is needed instead:
- *  - Performing arity dispatch
- *  - Supporting arity other than fixed-N or 0-or-more.
  *  - Avoiding the overhead of an implicit args list-to-array conversion
  *  - Returning to a continuation other than the one provided by your caller
  */
@@ -54,21 +52,16 @@ ccc.Library.prototype.addNativeFunctions = function(entries) {
  * Adds a NativeFunction object to the library using a general-purpose boilerplate
  * call wrapper.
  *
- * Rather than providing a function which has a lot of low-level responsibility,
- * you simply provide a function which optionally takes named arguments and which
- * optionally returns some kind of ccc Object.
+ * If the given function lists no argument names, it is assumed to take 0 or more arguments;
+ * no arity checking is done by the wrapper function and the implementation can access
+ * arguments dynamically through standard function |arguments|.
  *
- * If your function lists no argument names, it is assumed to take 0 or more arguments;
- * no arity checking is done by the wrapper function and you can do whatever you like
- * with the standard function |arguments| array-ish.
- *
- * If your function does list argument names, it is assumed to take exactly that many
+ * If the given function does list argument names, it is assumed to take exactly that many
  * arguments. Arity checking is done by the wrapper function and an exception is thrown
- * if there is a mismatch when called. If there is no mismatch, your named arguments
- * are properly bound to the caller's argument values.
+ * if there is a mismatch when called. If there is no mismatch, the named arguments
+ * will be properly bound to the caller's argument values.
  *
- * If your function returns no value, it will implicitly behave as if it returned
- * the ccc.unspecified value.
+ * If the given function returns no value, the wrapper will return ccc.unspecified.
  */
 ccc.Library.prototype.addSimpleFunction = function(name, fn) {
   this.entries_[name] = new ccc.NativeFunction(function(environment, continuation, args) {

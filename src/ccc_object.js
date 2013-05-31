@@ -29,7 +29,7 @@ ccc.Object.prototype.eqv = function(other) {
   return this.eq(other);
 };
 
-// Fallback to this.equal
+// Fallback to this.eqv
 ccc.Object.prototype.equal = function(other) {
   return this.eqv(other);
 };

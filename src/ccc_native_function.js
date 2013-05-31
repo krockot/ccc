@@ -8,14 +8,12 @@
  * the |continuation |of the call site, and a proper list containing the
  * applied |arguments| (or ccc.nil if there were none).
  *
- * The function is responsible for returning some meaningful continuation
- * generator (a 0-argument function which returns a 1-argument continuation
- * function). Failure to do so results in immediate program termination.
- *
  * The most common use case is to simply return a value to the caller. To do this,
- * you can simply take the continuation you receive and:
+ * an implementation should return the result of calling the received continuation
+ * with the desired return value, i.e.:
  *
- * return continuation(yourReturnValue);
+ * return continuation(returnValue);
+ *
  */
 ccc.NativeFunction = function(fn, name) {
   this.fn_ = fn;
