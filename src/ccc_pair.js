@@ -69,7 +69,7 @@ ccc.Pair.prototype.isList = function() {
 ccc.Pair.prototype.forEach = function(fn, opt_tailFn) {
   var pair = this;
   while (pair.constructor === ccc.Pair) {
-    fn(pair.car_);
+    fn(pair.car_, pair);
     pair = pair.cdr_;
   }
   if (pair.constructor !== ccc.Nil && opt_tailFn)
@@ -100,7 +100,7 @@ ccc.Pair.prototype.compileElements_ = function(environment) {
  * is bound to a syntax transformer. If expansion happens, compilation recurses
  * on the resulting form.
  *
- * Once expansion is finished, individual list elements are compiled in order.
+ * If the list is not to be expaned, individual list elements are compiled in order.
  */
 ccc.Pair.prototype.compile = function(environment) {
   if (this.car_.constructor === ccc.Symbol && !environment.lookup(this.car_.name)) {
