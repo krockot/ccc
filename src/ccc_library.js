@@ -152,8 +152,8 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
             if (!pred(value))
               throw new Error(name + ": Wrong type for argument " + appliedArgs.length);
             appliedArgs.push(value);
+            tail = tail.cdr();
           }
-          tail = tail.cdr();
         });
       } else {
         // Pass tail as last argument if optionalArgs is a typespec.
