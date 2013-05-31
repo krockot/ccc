@@ -143,7 +143,7 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
       });
       // Type-check optional arguments if present; otherwise use #? in their place
       if (entry.optionalArgs instanceof Array) {
-        entry.optionalArgs.forEach(function(type, index) {
+        entry.optionalArgs.forEach(function(type) {
           if (tail.constructor !== ccc.Pair)
             appliedArgs.push(ccc.unspecified);
           else {
@@ -160,14 +160,13 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
         // If the typespec is anything but ANY, do type-checking on item in the list
         appliedArgs.push(tail);
         if (entry.optionalArgs !== "ANY") {
-          var tailCount = 0;
-          while (tail.constructor === ccc.Pair) {
-            var pred = typePredicates[entry.optionalArgs];
-            if (!pred(tail.car()))
-              throw new Error(name + ": Wrong type for argument " + (appliedArgs.length + tailCount));
-            tail = tail.cdr();
-            tailCount += 1;
-          }
+          var argIndex = appliedArgs.length;
+          var pred = typePredicates[entry.optionalArgs];
+          tail.forEach(function(value) {
+            if (!pred(value))
+              throw new Error(name + ": Wrong type for argument " + argIndex);
+            argIndex += 1;
+          });
         }
         tail = ccc.nil;
       }
