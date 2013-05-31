@@ -108,6 +108,7 @@ ccc.PrimitiveTransformers["set!"] = new ccc.Transformer(function(environment, fo
  * compiled within the new lexical environment, so that a compiled lambda
  * appears externally as (#<native-function-to-generate-a-closure>).
  */
+ccc.PrimitiveTransformers["\u03bb"] =
 ccc.PrimitiveTransformers["lambda"] = new ccc.Transformer(function(environment, form) {
   if (form.constructor !== ccc.Pair)
     throw new Error("Bad lambda body: " + form.toString());
