@@ -20,6 +20,7 @@ src/ccc_transformer.js
 src/ccc_primitive_transformers.js
 src/ccc_library.js
 parser/ccc.js
+lib/util.js
 lib/base/base.js
 lib/base/base_math.js
 lib/base/base_types.js
