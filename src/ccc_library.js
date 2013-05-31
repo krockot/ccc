@@ -24,28 +24,13 @@ ccc.Library.prototype.entries = function() {
 };
 
 /**
- * Adds a NativeFunction object to the library. This is useful when you know what
- * you are doing and addSimpleFunction just doesn't cut it. All library entries
- * are ultimately native functions, but the majority of entries can be built
- * using the simpler (and aptly named) addSimpleFunction approach.
+ * Adds a NativeFunction object to the library.
  *
- * Examples of when this method is needed instead:
- *  - Avoiding the overhead of an implicit args list-to-array conversion
- *  - Returning to a continuation other than the one provided by your caller
+ * There is almost never a good reason to use this interface directly.
+ * See Library.register instead.
  */
 ccc.Library.prototype.addNativeFunction = function(name, nativeFunction) {
   this.entries_[name] = new ccc.NativeFunction(nativeFunction, this.name_ + ":" + name);
-};
-
-/**
- * Calls addNativeFunction for each key-value pair in the argument object.
- */
-ccc.Library.prototype.addNativeFunctions = function(entries) {
-  for (var name in entries) {
-    if (entries.hasOwnProperty(name)) {
-      this.addNativeFunction(name, entries[name]);
-    }
-  }
 };
 
 /**
@@ -85,3 +70,119 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
     }
   }
 };
+
+/**
+ * registerEntry takes an object with the following fields:
+ *
+ * |name| - (Required). Name of the procedure to register in the library.
+ * |impl| - (Required). Implementation of the procedure.
+ * |requiredArgs| - (Optional). Type and arity specification for the argument list
+ * |optionalArgs| - (Optional). Type and arity specification for optional arguments
+ * |customContinuation| - (Optional). Signifies that |impl| returns a new program
+ *                        continuation rather than a simple value. Defaults to false.
+ *
+ * |requiredArgs| must be an array of strings if provided. Each string is a case-insensitive
+ * type constraint to be enforced by the native function wrapper on the argument corresponding
+ * to the string's array position. For example, if requiredArgs is given as ["string", "symbol"],
+ * this signifies that the function requires at least 2 arguments; the first one must be a string
+ * and the second a symbol.
+ *
+ * |optionalArgs| may also be provided. If it is an array of type names (like requiredArgs),
+ * then the procedure takes between requiredArgs.length and (requiredArgs.length + optionalArgs.length)
+ * arguments, inclusive. All arguments provided by the caller are type-checked.
+ *
+ * |optionalArgs| may also be a simple type string, signifying that the procedure can take
+ * any number of arguments beyond those specified by requiredArgs. If this form is used,
+ * |impl| will receive as its final argument a proper list of all arguments not captured
+ * by requiredArgs. Elements in the list will be type-checked according to the value of
+ * |optionalArgs|.
+ */
+(function() {
+  var typePredicates = {
+    ANY: function() { return true; },
+    BOOLEAN: function(value) { return value.constructor === ccc.Boolean; },
+    INTEGER: function(value) { return value.constructor === ccc.Number && (value|0) === value; },
+    NUMBER: function(value) { return value.constructor === ccc.Number; },
+    CHAR: function(value) { return value.constructor === ccc.Char; },
+    STRING: function(value) { return value.constructor === ccc.String; },
+    SYMBOL: function(value) { return value.constructor === ccc.Symbol; },
+    VECTOR: function(value) { return value.constructor === ccc.Vector; },
+    PAIR: function(value) { return value.constructor === ccc.Pair; },
+    LIST: function(value) { return value === ccc.nil || (value.constructor === ccc.Pair && value.isList()); },
+  };
+
+  var sanitizeArgTypes = function(typeList) {
+    if (!typeList)
+      return [];
+    if (typeList instanceof Array)
+      return typeList.map(function(type) { return type.toUpperCase(); });
+    return typeList.toUpperCase();
+  };
+
+  ccc.Library.prototype.registerEntries = function(entries) {
+    entries.forEach(ccc.Library.prototype.registerEntry.bind(this));
+  };
+
+  ccc.Library.prototype.registerEntry = function(entry) {
+    var name = entry.name;
+    entry.requiredArgs = sanitizeArgTypes(entry.requiredArgs);
+    entry.optionalArgs = sanitizeArgTypes(entry.optionalArgs);
+    this.addNativeFunction(name, function(environment, continuation, args) {
+      var tail = args;
+      var appliedArgs = [];
+      // Type-check any fixed arguments
+      entry.requiredArgs.forEach(function(type, index) {
+        if (tail.constructor !== ccc.Pair)
+          throw new Error(name + ": Not enough arguments");
+        var value = tail.car();
+        var pred = typePredicates[type];
+        if (!pred(value))
+          throw new Error(name + ": Wrong type for argument " + index);
+        appliedArgs.push(value);
+        tail = tail.cdr();
+      });
+      // Type-check optional arguments if present; otherwise use #? in their place
+      if (entry.optionalArgs instanceof Array) {
+        entry.optionalArgs.forEach(function(type, index) {
+          if (tail.constructor !== ccc.Pair)
+            appliedArgs.push(ccc.unspecified);
+          else {
+            var value = tail.car();
+            var pred = typePredicates[type];
+            if (!pred(value))
+              throw new Error(name + ": Wrong type for argument " + appliedArgs.length);
+            appliedArgs.push(value);
+          }
+          tail = tail.cdr();
+        });
+      } else {
+        // Pass tail as last argument if optionalArgs is a typespec.
+        // If the typespec is anything but ANY, do type-checking on item in the list
+        appliedArgs.push(tail);
+        if (entry.optionalArgs !== "ANY") {
+          var tailCount = 0;
+          while (tail.constructor === ccc.Pair) {
+            var pred = typePredicates[entry.optionalArgs];
+            if (!pred(tail.car()))
+              throw new Error(name + ": Wrong type for argument " + (appliedArgs.length + tailCount));
+            tail = tail.cdr();
+            tailCount += 1;
+          }
+        }
+        tail = ccc.nil;
+      }
+
+      if (tail !== ccc.nil)
+        throw new Error(name + ": Too many arguments");
+
+      var thisArg = { environment: environment, continuation: continuation };
+      var result = entry.impl.apply(thisArg, appliedArgs);
+      if (entry.customContinuation)
+        return result;
+      if (result === undefined)
+        result = ccc.unspecified;
+      return continuation(result);
+    });
+  };
+}());
+
