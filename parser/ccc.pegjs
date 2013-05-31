@@ -22,10 +22,7 @@ comment
   / "#;" __ datum
 
 symbol
-  = "\u03bb" DL {
-    return new ccc.Symbol("lambda");
-  }
-  / i:initial j:subsequent* DL {
+  = i:initial j:subsequent* DL {
     return new ccc.Symbol(i + j.join(""));
   }
   / i:peculiar_identifier DL {
@@ -159,23 +156,18 @@ compound_datum
     = list
     / vector
 
-pair
-  = car:datum __ "." __ cdr:datum {
-    return new ccc.Pair(car, cdr);
-  }
-  / car:datum __ cdr:pair {
-    return new ccc.Pair(car, cdr);
-  }
-  / car:datum {
-    return new ccc.Pair(car, ccc.nil);
-  }
-
 list
-  = "(" __ data:pair __ ")" {
-    return data;
+  = "(" __ data:(datum __)+ ")" {
+    return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
   }
-  / "[" __ data:pair __ "]" {
-    return data;
+  / "(" __ data:(datum __)+ "." __ tail:datum __ ")" {
+    return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
+  }
+  / "[" __ data:(datum __)+ "]" {
+    return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
+  }
+  / "[" __ data:(datum __)+ "." __ tail:datum __ "]" {
+    return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
   }
   / abbreviation
 

@@ -40,6 +40,14 @@ ccc.Pair.makeList = function(/* ... */) {
   return list;
 };
 
+// Create an improper list from an array and a tail object
+ccc.Pair.makeImproperList = function(items, tail) {
+  var list = tail;
+  for (var i = items.length - 1; i >= 0; --i)
+    list = new ccc.Pair(items[i], list);
+  return list;
+};
+
 // Generates an Array object from a proper list. Throws an error if called
 // on an improper list.
 ccc.Pair.prototype.toArray = function() {
