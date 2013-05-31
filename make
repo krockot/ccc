@@ -6,5 +6,5 @@ fi
 
 cat $(cat sources.list) > ccc.js
 
-# yui-compressor ccc.js -o ccc.min.js
+yui-compressor ccc.js -o ccc.min.js
 
