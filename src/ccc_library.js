@@ -101,13 +101,14 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
   var typePredicates = {
     ANY: function() { return true; },
     BOOLEAN: function(value) { return value.constructor === ccc.Boolean; },
-    INTEGER: function(value) { return value.constructor === ccc.Number && (value|0) === value; },
+    INTEGER: function(value) { return value.constructor === ccc.Number && (value.value_|0) === value.value_; },
     NUMBER: function(value) { return value.constructor === ccc.Number; },
     CHAR: function(value) { return value.constructor === ccc.Char; },
     STRING: function(value) { return value.constructor === ccc.String; },
     SYMBOL: function(value) { return value.constructor === ccc.Symbol; },
     VECTOR: function(value) { return value.constructor === ccc.Vector; },
     PAIR: function(value) { return value.constructor === ccc.Pair; },
+    PAIR_OR_NIL: function(value) { return value === ccc.nil || value.constructor === ccc.Pair; },
     LIST: function(value) { return value === ccc.nil || (value.constructor === ccc.Pair && value.isList()); },
   };
 
