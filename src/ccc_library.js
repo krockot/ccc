@@ -110,6 +110,7 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
     PAIR: function(value) { return value.constructor === ccc.Pair; },
     PAIR_OR_NIL: function(value) { return value === ccc.nil || value.constructor === ccc.Pair; },
     LIST: function(value) { return value === ccc.nil || (value.constructor === ccc.Pair && value.isList()); },
+    PROCEDURE: function(value) { return value.apply instanceof Function; },
   };
 
   var sanitizeArgTypes = function(typeList) {
