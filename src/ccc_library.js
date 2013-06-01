@@ -160,7 +160,7 @@ ccc.Library.prototype.addSimpleFunctions = function(entries) {
         // Pass tail as last argument if optionalArgs is a typespec.
         // If the typespec is anything but ANY, do type-checking on item in the list
         appliedArgs.push(tail);
-        if (entry.optionalArgs !== "ANY") {
+        if (tail !== ccc.nil && entry.optionalArgs !== "ANY") {
           var argIndex = appliedArgs.length;
           var pred = typePredicates[entry.optionalArgs];
           tail.forEach(function(value) {
