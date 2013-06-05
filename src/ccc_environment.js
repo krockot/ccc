@@ -25,9 +25,11 @@ ccc.Environment = function(opt_parent) {
   if (opt_parent) {
     this.parent_ = opt_parent;
     this.nextLocal_ = opt_parent.nextLocal_;
+    this.topLevel_ = false;
   } else {
     this.initToplevel_();
     this.nextLocal_ = 0;
+    this.topLevel_ = true;
   }
 };
 
@@ -36,6 +38,10 @@ ccc.Environment.prototype.constructor = ccc.Environment;
 
 ccc.Environment.prototype.toString = function() {
   return "#<environment>";
+};
+
+ccc.Environment.prototype.isTopLevel = function() {
+  return this.topLevel_;
 };
 
 ccc.Environment.prototype.initToplevel_ = function() {
