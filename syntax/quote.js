@@ -11,6 +11,7 @@
  * returns the list '(1 2 3).
  */
 ccc.PrimitiveTransformers["quote"] = new ccc.Transformer(function(environment, form) {
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     throw new Error("quote: Bad form");
   if (form.cdr() !== ccc.nil)

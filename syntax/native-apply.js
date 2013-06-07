@@ -11,6 +11,7 @@
  * possible.
  */
 ccc.PrimitiveTransformers["native-apply"] = new ccc.Transformer(function(environment, form) {
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     throw new Error("native-apply: Bad form");
 

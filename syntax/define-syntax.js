@@ -7,6 +7,7 @@ ccc.PrimitiveTransformers["define-syntax"] = new ccc.Transformer(function(enviro
   if (!environment.isTopLevel())
     throw new Error("define-syntax: Invalid outside of top-level environment");
 
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     fail();
 

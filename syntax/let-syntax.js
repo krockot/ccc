@@ -9,6 +9,7 @@ ccc.PrimitiveTransformers["let-syntax"] = new ccc.Transformer(function(environme
   var fail = function() { throw new Error("let-syntax: Bad form"); };
   var expectPair = function(object) { if (object.constructor !== ccc.Pair) fail(); };
 
+  form = form.cdr();
   expectPair(form);
   var bindingsForm = form.car();
   expectPair(bindingsForm);

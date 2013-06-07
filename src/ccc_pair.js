@@ -114,7 +114,7 @@ ccc.Pair.prototype.compile = function(environment) {
   if (this.car_.constructor === ccc.Symbol && !environment.lookup(this.car_.name)) {
     var transformer = environment.lookupSyntax(this.car_.name);
     if (transformer) {
-      var newForm = transformer.transform(environment, this.cdr_);
+      var newForm = transformer.transform(environment, this);
       return newForm.compile(environment);
     }
   }

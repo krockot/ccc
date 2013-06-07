@@ -11,6 +11,7 @@
  * the alternate appropriately.
  */
 ccc.PrimitiveTransformers["if"] = new ccc.Transformer(function(environment, form) {
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     throw new Error("if: Bad form");
 

@@ -10,6 +10,7 @@
     var fail = function() { throw new Error("syntax-rules: Bad form"); };
     var expectPair = function(object) { if (object.constructor !== ccc.Pair) fail(); };
 
+    form = form.cdr();
     expectPair(form);
 
     // Extract a validated list of literal symbols for the rule set
@@ -28,6 +29,7 @@
         },
         fail);
 
+    // Compile the set of pattern-template pairs
     var rules = [];
     var rulesList = form.cdr();
     expectPair(rulesList);
@@ -41,7 +43,9 @@
           fail();
         if (rule.cdr() !== ccc.nil)
           fail();
-        rules.push({ pattern: pattern, template: rule.car() });
+        pattern = compilePattern(pattern);
+        var template = compileTemplate(rule.car(), pattern);
+        rules.push({ pattern: pattern, template: template });
       },
       fail);
 
@@ -49,4 +53,17 @@
       return ccc.nil;
     });
   });
+
+  var compilePattern = function(form) {
+    if (form.constructor === ccc.Pair) {
+      while (form.constructor === ccc.Pair) {
+
+        form = form.cdr();
+      }
+    }
+  };
+
+  var compileTemplate = function(form, pattern) {
+    return form;
+  };
 }());

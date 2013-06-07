@@ -10,6 +10,7 @@
  * It is a fatal error if the binding cannot be resolved at run-time.
  */
 ccc.PrimitiveTransformers["set!"] = new ccc.Transformer(function(environment, form) {
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     throw new Error("set!: Bad form");
 

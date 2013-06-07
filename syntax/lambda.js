@@ -9,6 +9,7 @@
  */
 ccc.PrimitiveTransformers["\u03bb"] =
 ccc.PrimitiveTransformers["lambda"] = new ccc.Transformer(function(environment, form) {
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     throw new Error("lambda: Bad form");
 

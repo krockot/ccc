@@ -10,6 +10,7 @@
  *   (#<native-function-which-binds-x-to-arg1-value> (some expression))
  */
 ccc.PrimitiveTransformers["define"] = new ccc.Transformer(function(environment, form) {
+  form = form.cdr();
   if (form.constructor !== ccc.Pair)
     throw new Error("define: Bad form");
 

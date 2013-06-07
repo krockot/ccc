@@ -9,6 +9,7 @@ ccc.PrimitiveTransformers["letrec-syntax"] = new ccc.Transformer(function(enviro
   var fail = function() { throw new Error("letrec-syntax: Bad form"); };
   var expectPair = function(object) { if (object.constructor !== ccc.Pair) fail(); };
 
+  form = form.cdr();
   expectPair(form);
   var bindingsForm = form.car();
   expectPair(bindingsForm);
