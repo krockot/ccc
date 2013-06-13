@@ -17,17 +17,20 @@
     var literalsList = form.car();
     if (literalsList !== ccc.nil && literalsList.constructor !== ccc.Pair)
       fail();
-    var literals = [];
-    if (literalsList !== ccc.nil)
+    var literals = {};
+    if (literalsList !== ccc.nil) {
       literalsList.forEach(
         function(symbol) {
           if (symbol.constructor !== ccc.Symbol)
             fail();
           if (symbol.name === '...')
             fail();
-          literals.push(symbol);
+          if (literals.hasOwnProperty(symbol.name))
+            fail();
+          literals[symbol.name] = true;
         },
         fail);
+    }
 
     // Compile the set of pattern-template pairs
     var rules = [];
@@ -36,34 +39,28 @@
     rulesList.forEach(
       function(rule) {
         expectPair(rule);
-        var pattern = rule.car();
-        expectPair(pattern);
+        var patternForm = rule.car();
+        expectPair(patternForm);
         rule = rule.cdr();
         if (rule === ccc.nil)
           fail();
         if (rule.cdr() !== ccc.nil)
           fail();
-        pattern = compilePattern(pattern);
-        var template = compileTemplate(rule.car(), pattern);
+        var pattern = new ccc.Pattern(patternForm);
+        var template = new ccc.Template(rule.car());
         rules.push({ pattern: pattern, template: template });
       },
       fail);
 
     return new ccc.Transformer(function(environment, form) {
-      return ccc.nil;
+      for (var i = 0; i < rules.length; ++i) {
+        var match = rules[i].pattern.match(environment, literals, form);
+        if (match) {
+          var expansion = rules[i].template.expand(environment, match);
+          return expansion;
+        }
+      }
+      throw new Error(form.car().toSource() + ": Bad form");
     });
   });
-
-  var compilePattern = function(form) {
-    if (form.constructor === ccc.Pair) {
-      while (form.constructor === ccc.Pair) {
-
-        form = form.cdr();
-      }
-    }
-  };
-
-  var compileTemplate = function(form, pattern) {
-    return form;
-  };
 }());

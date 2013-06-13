@@ -94,8 +94,8 @@ ccc.Parser = (function() {
         peg$c19 = function(i) {
             return new ccc.Symbol(i);
           },
-        peg$c20 = /^[!$%&*\/:<=>?\^_~a-z0-9]/i,
-        peg$c21 = "[!$%&*\\/:<=>?\\^_~a-z0-9]i",
+        peg$c20 = /^[!@$%&*\/:<=>?\^_~a-z0-9]/i,
+        peg$c21 = "[!@$%&*\\/:<=>?\\^_~a-z0-9]i",
         peg$c22 = /^[\x80-\uFFFF]/,
         peg$c23 = "[\\x80-\\uFFFF]",
         peg$c24 = function(c) { return c; },

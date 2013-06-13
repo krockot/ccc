@@ -31,7 +31,7 @@ symbol
   / quoted_symbol
 
 initial
-  = [!$%&*/:<=>?^_~a-z0-9]i
+  = [!@$%&*/:<=>?^_~a-z0-9]i
   / !space c:[\x80-\uffff] { return c; }
 
 subsequent

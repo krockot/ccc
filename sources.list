@@ -18,6 +18,10 @@ src/ccc_closure.js
 src/ccc_continuation.js
 src/ccc_transformer.js
 src/ccc_library.js
+src/ccc_pattern.js
+src/ccc_template.js
+src/ccc_capture.js
+src/ccc_enumerator.js
 syntax/quote.js
 syntax/define.js
 syntax/set.js

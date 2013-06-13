@@ -48,6 +48,19 @@ ccc.Pair.makeImproperList = function(items, tail) {
   return list;
 };
 
+// Concatenate a list onto the end of this one
+ccc.Pair.prototype.append = function(other) {
+  var pair = this, last = this;
+  while (pair.constructor === ccc.Pair) {
+    last = pair;
+    pair = pair.cdr_;
+  }
+  if (pair !== ccc.nil)
+    throw new Error("Cannot concatenate onto improper list");
+  last.cdr_ = other;
+  return this;
+};
+
 // Generates an Array object from a proper list. Throws an error if called
 // on an improper list.
 ccc.Pair.prototype.toArray = function() {
