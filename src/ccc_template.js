@@ -67,10 +67,10 @@ ccc.Template.prototype.toSource = function() {
     return captures[symbol.name].expand();
   };
 
-  var expandPair = function(pair, environment, captures, depth) {
-    if (isEllipsis(pair)) {
+  var expandPair = function(pair, environment, captures, depth, ignoreEllipsis) {
+    if (isEllipsis(pair) && !ignoreEllipsis) {
       var items = [];
-      var enumerable = expandTemplate(pair.car(), environment, captures, depth + 1);
+      var enumerable = expandTemplate(pair.car(), environment, captures, depth + 1, true);
       if (enumerable === null)
         return ccc.nil;
       var enumerators = collectEnumerators(enumerable);
@@ -98,13 +98,13 @@ ccc.Template.prototype.toSource = function() {
     throw new Error("Vector templates not yet implemented");
   };
 
-  var expandTemplate = function(template, environment, captures, depth) {
+  var expandTemplate = function(template, environment, captures, depth, ignoreEllipsis) {
     if (template.constructor === ccc.Pair)
-      return expandPair(template, environment, captures, depth);
+      return expandPair(template, environment, captures, depth, ignoreEllipsis);
     if (template.constructor === ccc.Vector)
-      return expandVector(template, environment, captures, depth);
+      return expandVector(template, environment, captures, depth, ignoreEllipsis);
     if (template.constructor === ccc.Symbol)
-      return expandSymbol(template, environment, captures, depth);
+      return expandSymbol(template, environment, captures, depth, ignoreEllipsis);
     if (template.constructor === ccc.Capture)
       return template.expand();
     return template;

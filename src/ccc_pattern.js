@@ -100,7 +100,7 @@ ccc.Pattern.prototype.toSource = function() {
     }
     // If not matching a literal symbol, match anything.
     var result = {};
-    result[symbol.name] = new ccc.Capture(form);
+    result[symbol.name] = new ccc.Capture(form, 1);
     return result;
   };
 

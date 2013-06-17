@@ -7,9 +7,9 @@
  * A rank 1 Capture emits a single value when expanded. A rank N > 1 Capture
  * expands to an Enumerator over 0 or more rank N-1 Captures.
  */
-ccc.Capture = function(data) {
+ccc.Capture = function(data, rank) {
   this.data_ = data;
-  this.rank_ = 1;
+  this.rank_ = rank;
 };
 
 ccc.Capture.prototype = { __proto__: ccc.Object.prototype };
@@ -24,7 +24,12 @@ ccc.Capture.prototype.toSource = function() {
 };
 
 ccc.Capture.prototype.promote = function() {
-  this.data_ = [new ccc.Capture(this.data_)];
+  this.data_ = [new ccc.Capture(this.data_, this.rank_)];
+  this.data_.toSource = function() {
+    return "(enum " +
+      this.map(function(d) { return d.toSource() }).join(", ") +
+      ")";
+  };
   this.rank_ += 1;
 };
 
