@@ -191,12 +191,13 @@ ccc.Environment.prototype.evalProgram = function(forms, opt_valueReceiver) {
   var evalNextForm = function() {
     var form = forms.shift();
     this.evalForm(form, function (value) {
-      if (opt_valueReceiver)
-        opt_valueReceiver(value, false);
-      if (forms.length > 0)
+      if (forms.length > 0) {
+        if (opt_valueReceiver)
+          opt_valueReceiver(value, false);
         evalNextForm();
-      else if (opt_valueReceiver)
+      } else if (opt_valueReceiver) {
         opt_valueReceiver(value, true);
+      }
     });
   }.bind(this);
 
