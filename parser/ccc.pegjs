@@ -31,7 +31,8 @@ symbol
   / quoted_symbol
 
 symbol_initial
-  = ![#',`] c:symbol_character { return c; }
+  = ![#',`.] c:symbol_character { return c; }
+  / i:"." j:symbol_character { return i + j; }
 
 symbol_character
   = !delimiter c:. { return c; }
@@ -148,17 +149,17 @@ compound_datum
     / vector
 
 list
-  = "(" __ data:(datum __)+ ")" {
-    return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
-  }
-  / "(" __ data:(datum __)+ "." __ tail:datum __ ")" {
+  = "(" __ data:(datum __)+ "." __ tail:datum __ ")" {
     return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
   }
-  / "[" __ data:(datum __)+ "]" {
+  / "(" __ data:(datum __)+ ")" {
     return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
   }
   / "[" __ data:(datum __)+ "." __ tail:datum __ "]" {
     return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
+  }
+  / "[" __ data:(datum __)+ "]" {
+    return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
   }
   / abbreviation
 
