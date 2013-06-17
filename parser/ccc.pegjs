@@ -10,11 +10,14 @@ nothing
   = space
   / comment
 
+delimiter
+  = [ "\t\f\r\n();[\]\|]
+
 __
   = nothing* { return ''; }
 
 DL
-  = &[ "\t\f\r\n();[\]\|] __
+  = &delimiter __
   / !.
 
 comment
@@ -22,34 +25,22 @@ comment
   / "#;" __ datum
 
 symbol
-  = i:initial j:subsequent* DL {
-    return new ccc.Symbol(i + j.join(""));
-  }
-  / i:peculiar_identifier DL {
-    return new ccc.Symbol(i);
+  = i:symbol_initial c:symbol_character* DL {
+    return new ccc.Symbol(i + c.join(""));
   }
   / quoted_symbol
 
-initial
-  = [!@$%&*/:<=>?^_~a-z0-9]i
-  / !space c:[\x80-\uffff] { return c; }
+symbol_initial
+  = ![#',`] c:symbol_character { return c; }
 
-subsequent
-  = initial
-  / digit
-  / special_subsequent
+symbol_character
+  = !delimiter c:. { return c; }
 
 digit
   = [0-9]
 
 hexdigit
   = [0-9a-f]i
-
-special_subsequent
-  = "+" / "-" / "." / "@"
-
-peculiar_identifier
-  = "+" / "-" / "..."
 
 boolean
   = "#t"i DL { return ccc.t; }
@@ -148,9 +139,9 @@ simple_datum
   / number
   / character
   / string
-  / symbol
   / null_value
   / unspecific
+  / symbol
 
 compound_datum
     = list
