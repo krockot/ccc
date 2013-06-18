@@ -14,6 +14,7 @@ src/ccc_location.js
 src/ccc_global_binding.js
 src/ccc_lexical_binding.js
 src/ccc_native_function.js
+src/ccc_native_object.js
 src/ccc_closure.js
 src/ccc_continuation.js
 src/ccc_transformer.js
