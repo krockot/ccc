@@ -32,7 +32,6 @@ syntax/define-syntax.js
 syntax/let-syntax.js
 syntax/letrec-syntax.js
 syntax/syntax-rules.js
-syntax/native-apply.js
 parser/ccc.js
 lib/util.js
 lib/base/base.js

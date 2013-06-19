@@ -14,14 +14,17 @@ ccc.NativeObject.prototype.toString = function() {
 
 ccc.NativeObject.prototype.get = function(names) {
   var object = this.object_;
+  var parentObject = object;
   while (names.constructor === ccc.Pair) {
+    parentObject = object;
     object = object[names.car().name];
     names = names.cdr();
   }
   if (names.constructor === ccc.Symbol) {
+    parentObject = object;
     object = object[names.name];
   }
-  return object;
+  return { parentObject: parentObject, object: object };
 };
 
 ccc.NativeObject.prototype.set = function(names, value) {
@@ -53,14 +56,16 @@ ccc.NativeObject.prototype.apply = function(environment, continuation, args) {
     if (names.constructor === ccc.Pair)
       names = names.car();
     var property = this.get(names);
+    var propertyObject = property.parentObject;
+    var propertyValue = property.object;
     if (op === "apply") {
       args = args.cdr().cdr().toArray();
-      args = args.map(function(o) { return ccc.libutil.objectToNativeValue(o); });
-      return continuation(ccc.libutil.objectFromNativeValue(property.apply(this.object_, args)));
+      args = args.map(function(o) { return ccc.libutil.objectToNativeValue(o, environment); });
+      return continuation(ccc.libutil.objectFromNativeValue(propertyValue.apply(propertyObject, args)));
     } else if (op === "get") {
-      return continuation(ccc.libutil.objectFromNativeValue(property));
+      return continuation(ccc.libutil.objectFromNativeValue(propertyValue));
     } else if (op === "set") {
-      this.set(names, ccc.libutil.objectToNativeValue(args.cdr().cdr().car()));
+      this.set(names, ccc.libutil.objectToNativeValue(args.cdr().cdr().car(), environment));
       return continuation(ccc.unspecified);
     } else if (op == "list") {
       return continuation(ccc.Pair.makeList.apply(null,

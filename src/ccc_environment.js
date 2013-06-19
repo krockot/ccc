@@ -154,15 +154,40 @@ ccc.Environment.prototype.importLibrary = function(library, prefix) {
  * When evaluation is complete, opt_receiver is called with the resulting
  * value.
  */
-ccc.Environment.prototype.evalForm = function(form, opt_receiver) {
-  var compiledForm = form.compile(this);
+ccc.Environment.prototype.evalForm = function(form, opt_receiver, opt_onError) {
+  try {
+    var compiledForm = form.compile(this);
 
-  var terminate = function(value) {
-    if (opt_receiver)
-      opt_receiver(value);
-  };
+    var terminate = function(value) {
+      if (opt_receiver)
+        opt_receiver(value);
+    };
 
-  var continuation = compiledForm.eval(this, terminate);
+    var continuation = compiledForm.eval(this, terminate);
+    var timeslice = function() {
+      try {
+        var cyclesPerSlice = 1000;
+        while (cyclesPerSlice-- > 0 && continuation)
+          continuation = continuation();
+        if (continuation) {
+          setTimeout(timeslice, 0);
+        }
+      } catch(e) {
+        if (opt_onError)
+          opt_onError(e);
+      }
+    };
+    timeslice();
+  } catch(e) {
+    if (opt_onError)
+      opt_onError(e);
+  }
+};
+
+/**
+ * Asynchronously continue a program from a given continuation.
+ */
+ccc.Environment.prototype.continueProgram = function(continuation) {
   var timeslice = function() {
     var cyclesPerSlice = 1000;
     while (cyclesPerSlice-- > 0 && continuation)
@@ -170,7 +195,7 @@ ccc.Environment.prototype.evalForm = function(form, opt_receiver) {
     if (continuation) {
       setTimeout(timeslice, 0);
     }
-  }
+  };
   timeslice();
 };
 
@@ -184,7 +209,7 @@ ccc.Environment.prototype.evalForm = function(form, opt_receiver) {
  * with the resulting value of the final form's evaluation as the first argument,
  * and true as the second argument to indicate that the program has terminated.
  */
-ccc.Environment.prototype.evalProgram = function(forms, opt_valueReceiver) {
+ccc.Environment.prototype.evalProgram = function(forms, opt_valueReceiver, opt_onError) {
   if (forms.length === 0)
     throw new Error("Empty program?");
 
@@ -199,7 +224,7 @@ ccc.Environment.prototype.evalProgram = function(forms, opt_valueReceiver) {
       } else if (opt_valueReceiver) {
         opt_valueReceiver(value, true);
       }
-    });
+    }, opt_onError);
   }.bind(this);
 
   evalNextForm();
