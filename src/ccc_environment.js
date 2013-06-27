@@ -51,7 +51,6 @@ ccc.Environment.prototype.initToplevel_ = function() {
       this.bindSyntax(k, primitives[k]);
     }
   }
-  this.bindGlobal("window", new ccc.NativeObject(window));
 };
 
 /**
