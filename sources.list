@@ -43,4 +43,6 @@ lib/base/base_string.js
 lib/base/base_vector.js
 lib/base/base_control.js
 lib/base/base_io.js
-lib/window/window.js
+lib/Window/window.js
+lib/DOM/DOM.js
+
