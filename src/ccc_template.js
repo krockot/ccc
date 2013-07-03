@@ -79,19 +79,35 @@ ccc.Template.prototype.toSource = function() {
         if (!next) {
           var hasMore = false;
           enumerators.forEach(function(e) { hasMore = hasMore || e.hasMore(); });
-          if (hasMore)
+          if (hasMore) {
             throw new Error("Template expansion length mismatch");
+          }
           var list = ccc.Pair.makeList.apply(null, items);
-          list.append(expandTemplate(pair.cdr().cdr(), environment, captures, depth));
+          var nextList = expandTemplate(pair.cdr().cdr(), environment, captures, depth);
+          if (list === ccc.nil) {
+            list = nextList;
+          } else if (nextList === null) {
+            list.append(ccc.nil);
+          } else if (nextList !== ccc.nil) {
+            list.append(nextList);
+          }
           return expandTemplate(list, environment, captures, depth);
         }
         items.push(next);
       }
     }
 
-    return new ccc.Pair(
-      expandTemplate(pair.car(), environment, captures, depth),
-      expandTemplate(pair.cdr(), environment, captures, depth));
+    var head = expandTemplate(pair.car(), environment, captures, depth);
+    var tail = expandTemplate(pair.cdr(), environment, captures, depth);
+    if (head === null) {
+      if (tail === null)
+        return ccc.nil;
+      return tail;
+    } else if (tail === null) {
+      return new ccc.Pair(head, ccc.nil);
+    } else {
+      return new ccc.Pair(head, tail);
+    }
   };
 
   var expandVector = function(vector, environment, captures, depth) {

@@ -89,7 +89,7 @@ ccc.Pattern.prototype.toSource = function() {
     // If we need to match a literal symbol, match only if the current form is
     // a symbol of the same name with no active lexical binding.
     if (literals.hasOwnProperty(symbol.name)) {
-      if (form.constructor !== ccc.Symbol)
+      if (form === null || form.constructor !== ccc.Symbol)
         return false;
       var binding = environment.lookup(form.name);
       if (binding && binding.constructor === ccc.LexicalBinding)
