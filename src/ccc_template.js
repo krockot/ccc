@@ -34,7 +34,7 @@ ccc.Template.prototype.toSource = function() {
       return false;
     return true;
   };
-  
+
   var collectEnumerators = function(object) {
     if (object instanceof ccc.Enumerator) {
       return [object];
@@ -44,7 +44,7 @@ ccc.Template.prototype.toSource = function() {
       return [];
     }
   };
-  
+
   var generateNext = function(object) {
     if (object instanceof ccc.Enumerator) {
       if (!object.hasMore())
@@ -80,7 +80,7 @@ ccc.Template.prototype.toSource = function() {
           var hasMore = false;
           enumerators.forEach(function(e) { hasMore = hasMore || e.hasMore(); });
           if (hasMore) {
-            throw new Error("Template expansion length mismatch");
+            throw new Error("Template expansion length mismatch.");
           }
           var list = ccc.Pair.makeList.apply(null, items);
           var nextList = expandTemplate(pair.cdr().cdr(), environment, captures, depth);
@@ -91,14 +91,14 @@ ccc.Template.prototype.toSource = function() {
           } else if (nextList !== ccc.nil) {
             list.append(nextList);
           }
-          return expandTemplate(list, environment, captures, depth);
+          return expandTemplate(list, environment, captures, depth, true);
         }
         items.push(next);
       }
     }
 
-    var head = expandTemplate(pair.car(), environment, captures, depth);
-    var tail = expandTemplate(pair.cdr(), environment, captures, depth);
+    var head = expandTemplate(pair.car(), environment, captures, depth, ignoreEllipsis);
+    var tail = expandTemplate(pair.cdr(), environment, captures, depth, ignoreEllipsis);
     if (head === null) {
       if (tail === null)
         return ccc.nil;
