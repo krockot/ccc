@@ -1,7 +1,7 @@
 /**
  * Capture enumerator.
  *
- * A rank N > 1 Captures expands to an Enumerator of rank N-1 values.
+ * A rank N > 1 Capture expands to an Enumerator of rank N-1 values.
  */
 ccc.Enumerator = function(values) {
   this.values_ = values.slice();

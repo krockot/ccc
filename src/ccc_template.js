@@ -71,27 +71,25 @@ ccc.Template.prototype.toSource = function() {
     if (isEllipsis(pair) && !ignoreEllipsis) {
       var items = [];
       var enumerable = expandTemplate(pair.car(), environment, captures, depth + 1, true);
-      if (enumerable === null)
-        return ccc.nil;
-      var enumerators = collectEnumerators(enumerable);
+      var tail = expandTemplate(pair.cdr().cdr(), environment, captures, depth, false);
+      var enumerators = [];
+      if (enumerable !== null)
+        enumerators = collectEnumerators(enumerable);
+      if (enumerators.length === 0)
+        return tail;
       while (true) {
         var next = generateNext(enumerable);
         if (!next) {
           var hasMore = false;
           enumerators.forEach(function(e) { hasMore = hasMore || e.hasMore(); });
-          if (hasMore) {
+          if (hasMore)
             throw new Error("Template expansion length mismatch.");
-          }
           var list = ccc.Pair.makeList.apply(null, items);
-          var nextList = expandTemplate(pair.cdr().cdr(), environment, captures, depth);
-          if (list === ccc.nil) {
-            list = nextList;
-          } else if (nextList === null) {
-            list.append(ccc.nil);
-          } else if (nextList !== ccc.nil) {
-            list.append(nextList);
-          }
-          return expandTemplate(list, environment, captures, depth, true);
+          if (list === ccc.nil)
+            list = tail;
+          else if (tail !== null && tail !== ccc.nil)
+            list.append(tail);
+          return expandTemplate(list, environment, captures, depth, false);
         }
         items.push(next);
       }
