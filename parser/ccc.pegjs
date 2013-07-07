@@ -149,17 +149,17 @@ compound_datum
     / vector
 
 list
-  = "(" __ data:(datum __)+ "." __ tail:datum __ ")" {
-    return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
-  }
-  / "(" __ data:(datum __)+ ")" {
+  = "(" __ data:(datum __)+ ")" {
     return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
   }
-  / "[" __ data:(datum __)+ "." __ tail:datum __ "]" {
+  / "(" __ data:(datum __)+ "." __ tail:datum __ ")" {
     return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
   }
   / "[" __ data:(datum __)+ "]" {
     return ccc.Pair.makeList.apply(null, data.map(function (e) { return e[0]; }));
+  }
+  / "[" __ data:(datum __)+ "." __ tail:datum __ "]" {
+    return ccc.Pair.makeImproperList(data.map(function (e) { return e[0]; }), tail);
   }
   / abbreviation
 
