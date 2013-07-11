@@ -1,7 +1,7 @@
 ccc
 ===
 
-A Scheme compiler and runtime environment for the browser.
+Compiler and runtime environment for Ccc, a new and wonderful Scheme variant.
 
 Specific highlights include:
 
@@ -11,9 +11,11 @@ Specific highlights include:
 
 * Tail call optimization
 
-* Simple foreign function interface
+* Mostly-hygienic syntax macros
 
-* Syntax extensions
+* Simple two-way foreign function and object interfaces
+
+* Syntax extensions to R5
 
     - Case-sensitive symbols.
       
@@ -30,4 +32,4 @@ Specific highlights include:
       as in #\xa9
       
     - S-expression comments
-    
+
