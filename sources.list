@@ -43,5 +43,7 @@ lib/base/base_string.js
 lib/base/base_vector.js
 lib/base/base_control.js
 lib/base/base_io.js
+lib/base/base_environment.js
 lib/base/base_keywords.js
+
 
